@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acid-Base 3D Explorer — BIOL 40C</title>
+  <style>
+    :root {
+      --red: #A6132F;
+      --gold: #FFC82E;
+      --charcoal: #1C1C1C;
+      --cream: #F2E7D1;
+      --offwhite: #FAFAF8;
+      --gray: #D0D1CE;
+      --medgray: #6B6B6B;
+      --blue: #4495D1;
+      --orange: #E57200;
+      --green: #588947;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Calibri, sans-serif; color: var(--charcoal); }
+    body { display: flex; flex-direction: column; background: var(--offwhite); }
+    header {
+      background: var(--red); color: white; padding: 14px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+    header .meta { color: var(--gold); font-size: 12px; font-weight: 600; }
+    main { flex: 1; display: flex; min-height: 0; }
+    #canvas-container { flex: 1; position: relative; background: linear-gradient(135deg, #f4f2ee 0%, #d8d6d2 100%); }
+    #canvas-container canvas { display: block; }
+    #hint-overlay {
+      position: absolute; top: 16px; left: 16px;
+      background: rgba(255,255,255,0.85); padding: 8px 12px;
+      border-radius: 4px; font-size: 11px; color: var(--medgray);
+      pointer-events: none;
+    }
+    aside {
+      width: 320px; background: var(--cream); padding: 24px;
+      overflow-y: auto; border-left: 4px solid var(--red);
+      flex-shrink: 0;
+    }
+    aside h2 {
+      color: var(--red); font-size: 13px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .selected-name {
+      font-size: 22px; font-weight: 700; color: var(--charcoal);
+      margin-bottom: 16px; line-height: 1.2;
+    }
+    .pattern {
+      font-size: 14px; background: white; padding: 14px;
+      border-radius: 6px; line-height: 1.7;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .pattern strong { color: var(--charcoal); }
+    .pattern .up { color: var(--red); font-weight: 700; }
+    .pattern .down { color: var(--blue); font-weight: 700; }
+    .pattern .neutral { color: var(--medgray); }
+    .pattern hr { margin: 10px 0; border: none; border-top: 1px solid var(--gray); }
+    .hint {
+      font-size: 11px; color: var(--medgray); font-style: italic;
+      margin-top: 16px; line-height: 1.4;
+    }
+    .divider {
+      height: 1px; background: var(--gray);
+      margin: 22px 0 18px 0;
+    }
+    .custom-section h2 { color: var(--red); }
+    .custom-row {
+      display: flex; align-items: center;
+      gap: 8px; margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .custom-row label {
+      width: 70px; color: var(--charcoal); font-weight: 600;
+    }
+    .custom-row input {
+      flex: 1; padding: 6px 8px; border: 1px solid var(--gray);
+      border-radius: 4px; font-size: 13px; width: 80px;
+      background: white; font-family: inherit;
+    }
+    .custom-row input:focus {
+      outline: 2px solid var(--gold); outline-offset: -1px;
+    }
+    .custom-actions {
+      display: flex; gap: 8px; margin-top: 12px;
+    }
+    .custom-actions button { flex: 1; padding: 8px 10px; }
+    #controls {
+      padding: 10px 24px; background: white;
+      border-top: 1px solid var(--gray);
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    button {
+      background: var(--red); color: white; border: none;
+      padding: 7px 14px; border-radius: 4px; cursor: pointer;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    }
+    button:hover { background: #C4263B; }
+    button.secondary {
+      background: white; color: var(--red); border: 1px solid var(--red);
+    }
+    .legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-left: auto; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--medgray); }
+    .legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Acid-Base 3D Explorer</h1>
+    <div class="meta">BIOL 40C · Foothill College</div>
+  </header>
+  <main>
+    <div id="canvas-container">
+      <div id="hint-overlay">Drag to rotate · scroll to zoom · click any sphere or region</div>
+    </div>
+    <aside>
+      <h2>Selected</h2>
+      <div class="selected-name" id="selected-name">Click a point or region</div>
+      <div class="pattern" id="selected-pattern">
+        <span class="neutral">pH —</span><br>
+        <span class="neutral">PCO₂ —</span><br>
+        <span class="neutral">HCO₃⁻ —</span>
+      </div>
+      <div class="hint">
+        The 4 ABGs from Class 10 are plotted as colored spheres. The green box at the origin is the normal range. Each shaded region is one of the four primary acid-base disorders.
+      </div>
+      <div class="divider"></div>
+      <div class="custom-section">
+        <h2>Plot a custom ABG</h2>
+        <div class="custom-row"><label for="in-ph">pH</label>
+          <input id="in-ph" type="number" step="0.01" min="6.8" max="7.8" value="7.40"></div>
+        <div class="custom-row"><label for="in-pco2">PCO₂</label>
+          <input id="in-pco2" type="number" step="1" min="10" max="100" value="40"></div>
+        <div class="custom-row"><label for="in-hco3">HCO₃⁻</label>
+          <input id="in-hco3" type="number" step="0.5" min="2" max="50" value="24"></div>
+        <div class="custom-actions">
+          <button id="plot-custom">Plot</button>
+          <button class="secondary" id="clear-custom">Clear</button>
+        </div>
+        <div class="hint" style="margin-top:10px;">
+          Type any ABG and click Plot. The sphere appears in 3D space and the side panel shows the inferred diagnosis.
+        </div>
+      </div>
+    </aside>
+  </main>
+  <div id="controls">
+    <button id="reset-view">Reset view</button>
+    <button class="secondary" id="toggle-samples">Toggle examples</button>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:#588947"></div>Normal</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#A6132F"></div>Resp acidosis</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#4495D1"></div>Resp alkalosis</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#E57200"></div>Metab acidosis</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#FFC82E"></div>Metab alkalosis</div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  const C = {
+    red: 0xA6132F, blue: 0x4495D1, orange: 0xE57200, gold: 0xFFC82E,
+    green: 0x588947, charcoal: 0x1C1C1C, gray: 0xD0D1CE, medgray: 0x9b9b9b,
+  };
+
+  // Coordinate mapping: pH 7.40 / PCO2 40 / HCO3- 24 → origin
+  const phToX  = (v) => (v - 7.40) * 20;
+  const pco2Y  = (v) => (v - 40) * 0.30;
+  const hco3Z  = (v) => (v - 24) * 0.50;
+
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.background = null;
+
+  const camera = new THREE.PerspectiveCamera(45,
+    container.clientWidth / container.clientHeight, 0.1, 1000);
+  const HOME_POS = new THREE.Vector3(14, 11, 17);
+  camera.position.copy(HOME_POS);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  container.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.1;
+  controls.target.set(0, 0, 0);
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  const dir1 = new THREE.DirectionalLight(0xffffff, 0.5);
+  dir1.position.set(10, 12, 8);
+  scene.add(dir1);
+
+  // ─── Axes ───
+  // Positive AND negative directions are solid cylinders (no dashed lines — those were
+  // hard to read at oblique angles). Each axis has a distinct color so students can
+  // identify which axis they're looking at at a glance:
+  //   pH   = deep purple  (the output / "result" axis)
+  //   PCO₂ = deep navy blue (lung / respiratory axis)
+  //   HCO₃⁻ = deep teal     (kidney / metabolic axis)
+  // The positive direction uses the saturated colour + arrow tip;
+  // the negative direction uses a faded version of the same colour, no arrow.
+  const AXIS_RADIUS = 0.10;
+  const AXIS_COLORS = {
+    pH:   { strong: 0x6A1B9A, faded: 0xCE93D8, hex: '#6A1B9A' },
+    pco2: { strong: 0x0D47A1, faded: 0x90CAF9, hex: '#0D47A1' },
+    hco3: { strong: 0x00695C, faded: 0x80CBC4, hex: '#00695C' },
+  };
+
+  function axisCylinder(dir, color, length, withArrow) {
+    const geom = new THREE.CylinderGeometry(AXIS_RADIUS, AXIS_RADIUS, length, 12);
+    const mat  = new THREE.MeshLambertMaterial({ color });
+    const mesh = new THREE.Mesh(geom, mat);
+    // CylinderGeometry is along +Y by default; rotate to align with `dir`.
+    mesh.position.copy(dir.clone().multiplyScalar(length / 2));
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+    scene.add(mesh);
+    if (withArrow) {
+      const coneGeom = new THREE.ConeGeometry(AXIS_RADIUS * 2.4, AXIS_RADIUS * 5, 14);
+      const coneMesh = new THREE.Mesh(coneGeom, mat);
+      coneMesh.position.copy(dir.clone().multiplyScalar(length + AXIS_RADIUS * 2.5));
+      coneMesh.quaternion.copy(mesh.quaternion);
+      scene.add(coneMesh);
+    }
+  }
+
+  // Positive directions: full-saturation colour + arrow tip
+  axisCylinder(new THREE.Vector3( 1, 0, 0), AXIS_COLORS.pH.strong,   11, true);
+  axisCylinder(new THREE.Vector3( 0, 1, 0), AXIS_COLORS.pco2.strong, 11, true);
+  axisCylinder(new THREE.Vector3( 0, 0, 1), AXIS_COLORS.hco3.strong, 11, true);
+  // Negative directions: faded same hue, no arrow
+  axisCylinder(new THREE.Vector3(-1, 0, 0), AXIS_COLORS.pH.faded,    10, false);
+  axisCylinder(new THREE.Vector3( 0,-1, 0), AXIS_COLORS.pco2.faded,  10, false);
+  axisCylinder(new THREE.Vector3( 0, 0,-1), AXIS_COLORS.hco3.faded,  10, false);
+
+  // ─── Text labels (canvas sprites) ───
+  const labelGroup = new THREE.Group();
+  scene.add(labelGroup);
+  function label(text, pos, opts = {}) {
+    const { color = '#1C1C1C', size = 0.42, bold = false, italic = false,
+            parent = labelGroup, anchor = null } = opts;
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    const weight = bold ? '700' : '500';
+    const style = italic ? 'italic' : 'normal';
+    ctx.font = `${style} ${weight} 56px -apple-system, Calibri, sans-serif`;
+    ctx.textBaseline = 'middle';
+    // Choose canvas alignment based on anchor so text doesn't sit awkwardly inside the texture.
+    if (anchor && anchor[0] === 0.0)      { ctx.textAlign = 'left';   ctx.fillText(text, 12, 64); }
+    else if (anchor && anchor[0] === 1.0) { ctx.textAlign = 'right';  ctx.fillText(text, 500, 64); }
+    else                                   { ctx.textAlign = 'center'; ctx.fillText(text, 256, 64); }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false });
+    const sprite = new THREE.Sprite(mat);
+    sprite.position.copy(pos);
+    sprite.scale.set(size * 4, size, 1);
+    if (anchor) sprite.center.set(anchor[0], anchor[1]);
+    sprite.renderOrder = 999;
+    parent.add(sprite);
+    return sprite;
+  }
+
+  // ─── Axis names + units (colour-matched to their axis) ───
+  // Positioned just past each axis end, in the same perpendicular direction the tick numbers use.
+  label('pH',              new THREE.Vector3(phToX(7.40) + 11.4, -0.85, 0),
+    { color: AXIS_COLORS.pH.hex,   bold: true, size: 0.85 });
+  label('PCO₂ (mmHg)',     new THREE.Vector3(1.6, pco2Y(40) + 11.0, 0),
+    { color: AXIS_COLORS.pco2.hex, bold: true, size: 0.75 });
+  label('HCO₃⁻ (mEq/L)',   new THREE.Vector3(0, -0.85, hco3Z(24) + 11.0),
+    { color: AXIS_COLORS.hco3.hex, bold: true, size: 0.75 });
+
+  // ─── Tick marks on the axes ───
+  // Each tick is a small SOLID 3D box (visible from any angle).
+  // The numeric label is anchored to the END of the tick using sprite.center, so the label
+  // visually "hangs from" the tick instead of floating beyond it.
+  const T_THICK = 0.07;
+  const T_LEN   = 0.55;     // a bit longer so the label has visual room next to it
+
+  function tick(axis, value, text, color) {
+    const colorHex = parseInt(color.replace('#', '0x'));
+    let tickPos, dim, labelPos, labelAnchor;
+    if (axis === 'pH') {
+      // Tick extends downward (-Y); label hangs from the bottom end of the tick.
+      tickPos     = new THREE.Vector3(phToX(value), -T_LEN/2, 0);
+      dim         = [T_THICK, T_LEN, T_THICK];
+      labelPos    = new THREE.Vector3(phToX(value), -T_LEN - 0.02, 0);
+      labelAnchor = [0.5, 1.0]; // top-centre pivot → sprite hangs DOWN from labelPos
+    } else if (axis === 'PCO2') {
+      // Tick extends rightward (+X); label sits to the right of the right end of the tick.
+      tickPos     = new THREE.Vector3(T_LEN/2, pco2Y(value), 0);
+      dim         = [T_LEN, T_THICK, T_THICK];
+      labelPos    = new THREE.Vector3(T_LEN + 0.04, pco2Y(value), 0);
+      labelAnchor = [0.0, 0.5]; // left-centre pivot → sprite extends RIGHT from labelPos
+    } else { // HCO3
+      tickPos     = new THREE.Vector3(0, -T_LEN/2, hco3Z(value));
+      dim         = [T_THICK, T_LEN, T_THICK];
+      labelPos    = new THREE.Vector3(0, -T_LEN - 0.02, hco3Z(value));
+      labelAnchor = [0.5, 1.0];
+    }
+    const tickMat  = new THREE.MeshBasicMaterial({ color: colorHex });
+    const tickMesh = new THREE.Mesh(new THREE.BoxGeometry(...dim), tickMat);
+    tickMesh.position.copy(tickPos);
+    scene.add(tickMesh);
+    label(text, labelPos, { color, size: 0.51, bold: true, anchor: labelAnchor });
+  }
+
+  // pH ticks (skip the centre 7.40 — green band already shows where it is).
+  // Extremes red (acidosis) / blue (alkalosis); normal-range bounds green.
+  [
+    [7.00, '7.0',  '#A6132F'],
+    [7.20, '7.20', '#A6132F'],
+    [7.35, '7.35', '#2e7d32'],
+    [7.45, '7.45', '#2e7d32'],
+    [7.60, '7.60', '#4495D1'],
+  ].forEach(([v, t, c]) => tick('pH', v, t, c));
+
+  // PCO2 ticks (skip 40).
+  [
+    [20, '20', '#4495D1'],
+    [35, '35', '#2e7d32'],
+    [45, '45', '#2e7d32'],
+    [60, '60', '#A6132F'],
+  ].forEach(([v, t, c]) => tick('PCO2', v, t, c));
+
+  // HCO3- ticks (skip 24).
+  [
+    [8,  '8',  '#A6132F'],
+    [15, '15', '#E57200'],
+    [22, '22', '#2e7d32'],
+    [26, '26', '#2e7d32'],
+    [32, '32', '#FFC82E'],
+    [38, '38', '#FFC82E'],
+  ].forEach(([v, t, c]) => tick('HCO3', v, t, c));
+
+  // ─── Normal-range bands on each axis (thicker green segment) ───
+  function normalBand(p1, p2) {
+    const geom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+    const mat  = new THREE.LineBasicMaterial({ color: 0x2e7d32, linewidth: 4 });
+    const line = new THREE.Line(geom, mat);
+    line.renderOrder = 5;
+    scene.add(line);
+    // Tube fallback for browsers that ignore linewidth
+    const dir = new THREE.Vector3().subVectors(p2, p1);
+    const len = dir.length();
+    if (len > 0) {
+      const tubeGeom = new THREE.CylinderGeometry(0.06, 0.06, len, 12);
+      const tubeMat  = new THREE.MeshBasicMaterial({ color: 0x2e7d32 });
+      const tube = new THREE.Mesh(tubeGeom, tubeMat);
+      tube.position.copy(p1.clone().add(p2).multiplyScalar(0.5));
+      tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+      scene.add(tube);
+    }
+  }
+  normalBand(new THREE.Vector3(phToX(7.35), 0, 0),  new THREE.Vector3(phToX(7.45), 0, 0));
+  normalBand(new THREE.Vector3(0, pco2Y(35), 0),    new THREE.Vector3(0, pco2Y(45), 0));
+  normalBand(new THREE.Vector3(0, 0, hco3Z(22)),    new THREE.Vector3(0, 0, hco3Z(26)));
+
+  // ─── Regions (boxes for the 4 disorders + normal) ───
+  function regionBox(phR, pco2R, hco3R, color, opacity, data) {
+    const xMin = phToX(phR[0]), xMax = phToX(phR[1]);
+    const yMin = pco2Y(pco2R[0]), yMax = pco2Y(pco2R[1]);
+    const zMin = hco3Z(hco3R[0]), zMax = hco3Z(hco3R[1]);
+    const w = xMax - xMin, h = yMax - yMin, d = zMax - zMin;
+    const geom = new THREE.BoxGeometry(w, h, d);
+    const mat = new THREE.MeshLambertMaterial({ color, transparent: true, opacity, depthWrite: false });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.position.set((xMin + xMax)/2, (yMin + yMax)/2, (zMin + zMax)/2);
+    mesh.userData = data;
+    scene.add(mesh);
+    // Wireframe edges
+    const edges = new THREE.EdgesGeometry(geom);
+    const wm = new THREE.LineBasicMaterial({ color, transparent: true, opacity: Math.min(1, opacity * 2.5) });
+    const wire = new THREE.LineSegments(edges, wm);
+    wire.position.copy(mesh.position);
+    wire.userData = data;
+    scene.add(wire);
+    return { mesh, wire };
+  }
+
+  const regions = [
+    {
+      phR: [7.35, 7.45], pco2R: [35, 45], hco3R: [22, 26],
+      color: C.green, opacity: 0.40,
+      data: { type: 'region', label: 'Normal',
+              pattern: { pH: 'normal', pco2: 'normal', hco3: 'normal' },
+              note: 'Within all three normal ranges.' }
+    },
+    {
+      phR: [7.05, 7.34], pco2R: [46, 70], hco3R: [22, 36],
+      color: C.red, opacity: 0.16,
+      data: { type: 'region', label: 'Respiratory acidosis',
+              pattern: { pH: 'down', pco2: 'up', hco3: 'normal/up' },
+              note: 'Compensation: kidneys retain HCO₃⁻ over days.' }
+    },
+    {
+      phR: [7.46, 7.65], pco2R: [20, 34], hco3R: [16, 26],
+      color: C.blue, opacity: 0.16,
+      data: { type: 'region', label: 'Respiratory alkalosis',
+              pattern: { pH: 'up', pco2: 'down', hco3: 'normal/down' },
+              note: 'Compensation: kidneys excrete HCO₃⁻ over days.' }
+    },
+    {
+      phR: [7.05, 7.34], pco2R: [22, 45], hco3R: [5, 21],
+      color: C.orange, opacity: 0.16,
+      data: { type: 'region', label: 'Metabolic acidosis',
+              pattern: { pH: 'down', pco2: 'normal/down', hco3: 'down' },
+              note: 'Compensation: lungs blow off CO₂ in minutes.' }
+    },
+    {
+      phR: [7.46, 7.65], pco2R: [35, 50], hco3R: [27, 38],
+      color: C.gold, opacity: 0.22,
+      data: { type: 'region', label: 'Metabolic alkalosis',
+              pattern: { pH: 'up', pco2: 'normal/up', hco3: 'up' },
+              note: 'Compensation: lungs retain CO₂ (limited by hypoxia).' }
+    },
+  ];
+
+  const regionMeshes = [];
+  const regionWires  = [];
+  regions.forEach(r => {
+    const { mesh, wire } = regionBox(r.phR, r.pco2R, r.hco3R, r.color, r.opacity, r.data);
+    regionMeshes.push(mesh);
+    regionWires.push(wire);
+  });
+
+  // ─── Sample ABG points ───
+  const samples = [
+    { name: 'Healthy reference',   ph: 7.40, pco2: 40, hco3: 24, dx: 'Normal',                                                color: C.green  },
+    { name: 'ABG 1 (Class 10)',    ph: 7.28, pco2: 60, hco3: 28, dx: 'Respiratory acidosis (chronic, compensated)',           color: C.red    },
+    { name: 'ABG 2 (Class 10)',    ph: 7.55, pco2: 25, hco3: 22, dx: 'Respiratory alkalosis (acute)',                         color: C.blue   },
+    { name: 'ABG 3 — like Santiago', ph: 7.18, pco2: 22, hco3: 8,  dx: 'Metabolic acidosis with respiratory compensation',    color: C.orange },
+    { name: 'ABG 4 — like Oscar',  ph: 7.48, pco2: 45, hco3: 32, dx: 'Metabolic alkalosis',                                   color: C.gold   },
+  ];
+
+  // Examples (Class 10 samples) live in their own group so they can be toggled.
+  const examplesGroup = new THREE.Group();
+  scene.add(examplesGroup);
+  const sampleMeshes = [];
+  samples.forEach(s => {
+    const x = phToX(s.ph), y = pco2Y(s.pco2), z = hco3Z(s.hco3);
+    const geom = new THREE.SphereGeometry(0.40, 32, 32);
+    const mat  = new THREE.MeshLambertMaterial({ color: s.color });
+    const sphere = new THREE.Mesh(geom, mat);
+    sphere.position.set(x, y, z);
+    sphere.userData = { type: 'sample', ...s };
+    examplesGroup.add(sphere);
+    sampleMeshes.push(sphere);
+    label(s.name.replace(' (Class 10)', '').replace(' — like', ' —'),
+      new THREE.Vector3(x + 0.55, y + 0.55, z),
+      { size: 0.32, color: '#1C1C1C', parent: examplesGroup });
+  });
+
+  // Origin marker
+  const origin = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 16, 16),
+    new THREE.MeshBasicMaterial({ color: C.charcoal })
+  );
+  scene.add(origin);
+
+  // ─── Custom ABG plotting ───
+  const customGroup = new THREE.Group();
+  scene.add(customGroup);
+  const customMeshes = [];
+
+  function classifyABG(pH, pco2, hco3) {
+    const phLow = pH < 7.35, phHigh = pH > 7.45;
+    const pco2Low = pco2 < 35, pco2High = pco2 > 45;
+    const hco3Low = hco3 < 22, hco3High = hco3 > 26;
+    const phNormal = !phLow && !phHigh;
+    const pco2Normal = !pco2Low && !pco2High;
+    const hco3Normal = !hco3Low && !hco3High;
+
+    if (phNormal && pco2Normal && hco3Normal) return { dx: 'Normal', color: C.green };
+
+    if (phLow) {
+      if (pco2High && hco3Low) return { dx: 'Mixed acidosis (resp + metab)', color: 0x9b59b6 };
+      if (pco2High) return { dx: 'Respiratory acidosis' + (hco3High ? ' (compensated)' : ''), color: C.red };
+      if (hco3Low)  return { dx: 'Metabolic acidosis' + (pco2Low ? ' with respiratory compensation' : ''), color: C.orange };
+      return { dx: 'Acidosis (atypical)', color: 0x9b59b6 };
+    }
+    if (phHigh) {
+      if (pco2Low && hco3High) return { dx: 'Mixed alkalosis (resp + metab)', color: 0x9b59b6 };
+      if (pco2Low) return { dx: 'Respiratory alkalosis' + (hco3Low ? ' (compensated)' : ''), color: C.blue };
+      if (hco3High) return { dx: 'Metabolic alkalosis' + (pco2High ? ' with respiratory compensation' : ''), color: C.gold };
+      return { dx: 'Alkalosis (atypical)', color: 0x9b59b6 };
+    }
+    // pH normal but PCO2 / HCO3- abnormal → fully compensated
+    if (pco2High && hco3High) return { dx: 'Compensated respiratory acidosis (or metabolic alkalosis)', color: 0x9b59b6 };
+    if (pco2Low && hco3Low)   return { dx: 'Compensated respiratory alkalosis (or metabolic acidosis)', color: 0x9b59b6 };
+    return { dx: 'Borderline / mixed picture', color: 0x9b59b6 };
+  }
+
+  function plotCustom(pH, pco2, hco3) {
+    const { dx, color } = classifyABG(pH, pco2, hco3);
+    const x = phToX(pH), y = pco2Y(pco2), z = hco3Z(hco3);
+    const geom = new THREE.SphereGeometry(0.36, 32, 32);
+    // Slight glow effect: secondary outer mesh in same color, more transparent
+    const halo = new THREE.Mesh(
+      new THREE.SphereGeometry(0.55, 24, 24),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.18 })
+    );
+    halo.position.set(x, y, z);
+    customGroup.add(halo);
+    const sphere = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ color }));
+    sphere.position.set(x, y, z);
+    sphere.userData = { type: 'sample', name: `Custom ABG`, ph: pH, pco2, hco3, dx, color, custom: true };
+    customGroup.add(sphere);
+    customMeshes.push(sphere);
+    clickable.push(sphere);
+    label(`${pH} / ${pco2} / ${hco3}`,
+      new THREE.Vector3(x + 0.55, y + 0.55, z),
+      { size: 0.30, color: '#1C1C1C', bold: true, parent: customGroup });
+    // Auto-select the new sphere
+    updatePanel(sphere.userData);
+  }
+
+  function clearCustom() {
+    while (customGroup.children.length) {
+      const c = customGroup.children[0];
+      customGroup.remove(c);
+      if (c.geometry) c.geometry.dispose();
+      if (c.material) {
+        if (c.material.map) c.material.map.dispose();
+        c.material.dispose();
+      }
+    }
+    customMeshes.forEach(m => {
+      const i = clickable.indexOf(m);
+      if (i >= 0) clickable.splice(i, 1);
+    });
+    customMeshes.length = 0;
+  }
+
+  // ─── Click detection ───
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  const clickable = [...sampleMeshes, ...regionMeshes];
+
+  function onClick(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(clickable, false);
+    if (hits.length > 0) {
+      // Prefer samples (points) over regions (boxes)
+      const sampleHit = hits.find(h => h.object.userData.type === 'sample');
+      const obj = (sampleHit || hits[0]).object;
+      updatePanel(obj.userData);
+    }
+  }
+  renderer.domElement.addEventListener('click', onClick);
+
+  // ─── Side panel ───
+  function arrow(token) {
+    if (token === 'up')             return '<span class="up">↑</span>';
+    if (token === 'down')           return '<span class="down">↓</span>';
+    if (token === 'normal')         return '<span class="neutral">—</span>';
+    if (token === 'normal/up')      return '<span class="neutral">—</span>/<span class="up">↑</span>';
+    if (token === 'normal/down')    return '<span class="neutral">—</span>/<span class="down">↓</span>';
+    return token;
+  }
+  function updatePanel(d) {
+    const nameEl = document.getElementById('selected-name');
+    const patEl  = document.getElementById('selected-pattern');
+    if (d.type === 'sample') {
+      nameEl.textContent = d.name;
+      patEl.innerHTML = `
+        pH <strong>${d.ph}</strong> &nbsp; · &nbsp;
+        PCO₂ <strong>${d.pco2}</strong> &nbsp; · &nbsp;
+        HCO₃⁻ <strong>${d.hco3}</strong>
+        <hr>
+        <em>${d.dx}</em>
+      `;
+    } else if (d.type === 'region') {
+      nameEl.textContent = d.label;
+      patEl.innerHTML = `
+        pH ${arrow(d.pattern.pH)} &nbsp; · &nbsp;
+        PCO₂ ${arrow(d.pattern.pco2)} &nbsp; · &nbsp;
+        HCO₃⁻ ${arrow(d.pattern.hco3)}
+        <hr>
+        <em style="color:#6B6B6B">${d.note || ''}</em>
+      `;
+    }
+  }
+
+  // ─── Buttons ───
+  document.getElementById('reset-view').addEventListener('click', () => {
+    camera.position.copy(HOME_POS);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  });
+  let examplesOn = true;
+  document.getElementById('toggle-samples').addEventListener('click', () => {
+    examplesOn = !examplesOn;
+    examplesGroup.visible = examplesOn;
+  });
+
+  // Custom-ABG inputs
+  function readNum(id) {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) ? null : v;
+  }
+  document.getElementById('plot-custom').addEventListener('click', () => {
+    const pH = readNum('in-ph'), pco2 = readNum('in-pco2'), hco3 = readNum('in-hco3');
+    if (pH === null || pco2 === null || hco3 === null) return;
+    if (pH < 6.7 || pH > 8.0)   { alert('pH out of plottable range (6.7–8.0).'); return; }
+    if (pco2 < 10 || pco2 > 100) { alert('PCO₂ out of plottable range (10–100 mmHg).'); return; }
+    if (hco3 < 2 || hco3 > 50)   { alert('HCO₃⁻ out of plottable range (2–50 mEq/L).'); return; }
+    plotCustom(pH, pco2, hco3);
+  });
+  document.getElementById('clear-custom').addEventListener('click', clearCustom);
+  // Enter-to-plot from any input
+  ['in-ph','in-pco2','in-hco3'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('plot-custom').click();
+    });
+  });
+
+  // ─── Animate / resize ───
+  function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+  animate();
+  window.addEventListener('resize', () => {
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+  });
+  </script>
+</body>
+</html>
