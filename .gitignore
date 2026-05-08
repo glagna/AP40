@@ -9,3 +9,6 @@
 # Editor backups
 *~
 *.bak
+
+# Build sources for generated PDFs (the PDFs themselves are tracked)
+worksheets/study_sheet_source.html
