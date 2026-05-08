@@ -1,0 +1,11 @@
+# LibreOffice / Office lock and temporary files
+.~lock.*#
+*.tmp
+~$*
+
+# macOS junk
+.DS_Store
+
+# Editor backups
+*~
+*.bak
