@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>BIOL 40C — MHC I vs MHC II Decision Game</title>
+<style>
+  :root {
+    --red: #A6132F;
+    --red-dark: #8a0f25;
+    --gold: #FFC82E;
+    --blue: #4495D1;
+    --green: #588947;
+    --orange: #E57200;
+    --cream: #F2E7D1;
+    --gray: #D0D1CE;
+    --off: #FAFAF8;
+    --charcoal: #1C1C1C;
+    --muted: #6B6B6B;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 18px;
+    background: var(--off);
+    font-family: 'Calibri', 'Segoe UI', system-ui, sans-serif;
+    color: var(--charcoal);
+    line-height: 1.45;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  header {
+    background: var(--red);
+    color: #fff;
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  header h1 {
+    margin: 0;
+    font-family: 'Montserrat', 'Calibri', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  header .right { display: flex; align-items: center; gap: 12px; }
+  header .biol {
+    color: var(--gold);
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  .sound-btn {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 18px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .sound-btn:hover { background: rgba(255,255,255,0.28); }
+  .intro {
+    background: var(--cream);
+    padding: 14px 18px;
+    border-left: 5px solid var(--gold);
+    border-radius: 4px;
+    margin-bottom: 18px;
+    font-size: 14px;
+  }
+  .intro p { margin: 6px 0; }
+  .progress-row {
+    display: flex; align-items: center; gap: 14px;
+    margin: 10px 0 16px 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .progress-bar {
+    flex: 1;
+    background: var(--gray);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    background: linear-gradient(90deg, var(--red), var(--gold));
+    height: 100%;
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 22px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 16px;
+  }
+  .badge {
+    display: inline-block;
+    background: var(--red);
+    color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .scenario {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--charcoal);
+    margin-bottom: 6px;
+  }
+  .scenario-detail {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 18px;
+    font-style: italic;
+  }
+  .question {
+    font-weight: 600;
+    color: var(--red);
+    margin: 14px 0 8px 0;
+    font-size: 14px;
+  }
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .options.full { grid-template-columns: 1fr; }
+  .opt {
+    padding: 11px 14px;
+    border: 2px solid var(--gray);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+    transition: all 0.15s;
+    color: var(--charcoal);
+    font-family: inherit;
+  }
+  .opt:hover:not(:disabled) {
+    border-color: var(--blue);
+    background: #f0f7fc;
+  }
+  .opt.selected {
+    border-color: var(--blue);
+    background: #e1f0fa;
+  }
+  .opt.correct {
+    border-color: var(--green);
+    background: #e8f3e1;
+    color: var(--green);
+    font-weight: 600;
+  }
+  .opt.wrong {
+    border-color: var(--red);
+    background: #f9e1e5;
+    color: var(--red);
+    font-weight: 600;
+  }
+  .opt:disabled { cursor: default; }
+  .explanation {
+    background: var(--cream);
+    border-left: 4px solid var(--gold);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-top: 12px;
+    font-size: 13.5px;
+    display: none;
+  }
+  .explanation.show { display: block; }
+  .explanation strong { color: var(--red); }
+  .btn {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { background: var(--red-dark); }
+  .btn:disabled { background: var(--gray); cursor: default; }
+  .btn-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .summary {
+    text-align: center;
+    padding: 30px 20px;
+  }
+  .summary h2 {
+    color: var(--red);
+    font-family: 'Montserrat', sans-serif;
+    margin: 0 0 10px 0;
+  }
+  .summary .score {
+    font-size: 48px;
+    color: var(--gold);
+    font-weight: 700;
+    margin: 16px 0;
+  }
+  .summary p { font-size: 15px; color: var(--charcoal); margin: 8px 0; }
+  .summary .takeaway {
+    background: var(--cream);
+    padding: 16px;
+    border-radius: 6px;
+    margin: 20px auto;
+    max-width: 600px;
+    text-align: left;
+    border-left: 4px solid var(--gold);
+  }
+  .legend {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .legend .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fff; border: 1px solid var(--gray);
+    padding: 3px 9px; border-radius: 11px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.i { background: var(--blue); }
+  .dot.ii { background: var(--orange); }
+  footer { text-align: center; color: var(--muted); font-size: 11px; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🧬 MHC I vs MHC II Decision Game</h1>
+    <div class="right">
+      <button class="sound-btn" id="soundToggle" aria-label="Toggle sound">🔊 Sound on</button>
+      <div class="biol">BIOL 40C · Wk 6</div>
+    </div>
+  </header>
+
+  <div class="intro">
+    <p><strong>Goal:</strong> For each cell-scenario, decide (1) which MHC class displays the antigen, (2) which T cell responds, and (3) what happens. The two-rule cheat sheet from class:</p>
+    <p><strong>MHC I = "what I made"</strong> &nbsp;·&nbsp; on every nucleated cell &nbsp;·&nbsp; read by <strong>CD8+ cytotoxic T cells</strong> → kill the cell.</p>
+    <p><strong>MHC II = "what I ate"</strong> &nbsp;·&nbsp; only on antigen-presenting cells (dendritic, macrophage, B cell) &nbsp;·&nbsp; read by <strong>CD4+ helper T cells</strong> → license other immune cells.</p>
+    <div class="legend">
+      <span class="pill"><span class="dot i"></span>MHC I</span>
+      <span class="pill"><span class="dot ii"></span>MHC II</span>
+    </div>
+  </div>
+
+  <div class="progress-row">
+    <span id="progress-text">Question 1 of 10</span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <span id="score-text">Score: 0</span>
+  </div>
+
+  <div id="game" class="card"></div>
+  <div id="summary" class="card" style="display:none;"></div>
+
+  <footer>BIOL 40C — Spring 2026 · Foothill College · Built for Class 14, May 20, 2026</footer>
+</div>
+
+<script>
+// ─── Sound effects (Web Audio API — no external files) ───────────────────
+let audioCtx = null;
+let soundsEnabled = true;
+function ensureCtx() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { soundsEnabled = false; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playTone(freq, duration, type='sine', startTime=0, gain=0.15) {
+  if (!soundsEnabled) return;
+  const ctx = ensureCtx();
+  if (!ctx) return;
+  const t0 = ctx.currentTime + startTime;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(gain, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.05);
+}
+function playCorrect() {
+  // Two-tone ascending chime: C5 → E5
+  playTone(523.25, 0.15, 'sine', 0,    0.18);
+  playTone(659.25, 0.25, 'sine', 0.12, 0.18);
+}
+function playWrong() {
+  // Soft descending "no" tone: low square
+  playTone(196,    0.18, 'square', 0,    0.10);
+  playTone(155.56, 0.22, 'square', 0.10, 0.10);
+}
+function playNext() {
+  // Subtle page-turn click
+  playTone(880, 0.05, 'triangle', 0, 0.08);
+}
+function playComplete() {
+  // Triumphant fanfare: C5 - E5 - G5 - C6
+  playTone(523.25, 0.18, 'sine', 0,    0.18);
+  playTone(659.25, 0.18, 'sine', 0.15, 0.18);
+  playTone(783.99, 0.18, 'sine', 0.30, 0.18);
+  playTone(1046.5, 0.45, 'sine', 0.45, 0.20);
+}
+
+const rounds = [
+  {
+    scenario: "Healthy liver hepatocyte, no infection",
+    detail: "Just a normal nucleated cell doing its metabolic work.",
+    q1: { text: "Which MHC class does this cell express?", options: ["MHC I only", "MHC II only", "Both MHC I and II", "Neither"], answer: 0,
+          explain: "Every nucleated cell expresses MHC I to display its own self-peptides. The cell is healthy, so cytotoxic T cells see normal self peptides and ignore it." },
+    q2: { text: "What does a passing CD8+ T cell do?", options: ["Kill the cell", "Help activate a B cell", "Ignore it", "Engulf it"], answer: 2,
+          explain: "CD8+ T cells are checking MHC I for foreign peptides. Self peptides = no response. Healthy cells are ignored." }
+  },
+  {
+    scenario: "Respiratory epithelial cell infected with influenza virus",
+    detail: "The virus has hijacked the cell and is using its ribosomes to make viral proteins.",
+    q1: { text: "What does this infected cell display on MHC I?", options: ["Self peptides only", "Viral peptides from intracellular replication", "Bacterial cell-wall fragments", "Nothing — viruses block MHC I"], answer: 1,
+          explain: "MHC I samples whatever proteins are being made INSIDE the cell. A flu-infected cell is now making viral proteins, so viral peptides get loaded onto MHC I and displayed. (Some viruses do down-regulate MHC I — that triggers NK cells instead. That comes up below.)" },
+    q2: { text: "Which T cell recognizes and acts?", options: ["CD4+ helper T cell → kills the cell", "CD8+ cytotoxic T cell → kills the cell", "CD4+ helper T cell → makes antibodies", "B cell → makes antibodies directly"], answer: 1,
+          explain: "CD8+ cytotoxic T cells read MHC I. Viral peptide on MHC I = 'this cell is making something foreign' = kill it via perforin/granzymes. This is the ONLY way to clear an intracellular pathogen." }
+  },
+  {
+    scenario: "Dendritic cell that just phagocytosed Streptococcus bacteria",
+    detail: "An APC patrolling tissue ingested an extracellular pathogen. The bacteria are now in a phagolysosome.",
+    q1: { text: "Where do the bacterial peptides get loaded?", options: ["MHC I only", "MHC II only", "Both, but MHC II is the dominant route here", "Bacterial peptides go to the proteasome → MHC I"], answer: 2,
+          explain: "Engulfed (extracellular) material enters the MHC II pathway. Bacterial peptides + MHC II are displayed on the surface. (Cross-presentation can route some onto MHC I too, but the dominant signal is MHC II.)" },
+    q2: { text: "Which T cell will this APC license?", options: ["CD8+ cytotoxic T cell directly", "CD4+ helper T cell, which then licenses other immune cells", "NK cell", "Mast cell"], answer: 1,
+          explain: "CD4+ TH cells read MHC II. The dendritic cell migrates to the lymph node, finds a TH cell with a matching TCR, and licenses it. That TH cell then secretes cytokines to activate B cells and other arms." }
+  },
+  {
+    scenario: "Macrophage that ate a fragment of apoptotic debris in healthy tissue",
+    detail: "Cleanup, not infection. The macrophage is silently disposing of a dying cell.",
+    q1: { text: "What signal does this APC normally give a TH cell?", options: ["Strong activating signal — full immune response", "No co-stimulatory signal — TH cell goes anergic or silent", "Triggers antibody production", "Triggers fever via IL-1"], answer: 1,
+          explain: "Normal apoptotic cleanup is SILENT — no inflammation, no co-stimulation. Even if a TH cell happens to recognize a self-peptide on MHC II, without co-stimulation (B7 → CD28) it gets shut down. This is one of the central self-tolerance mechanisms." },
+    q2: { text: "Why does this matter for Ana (lupus)?", options: ["It doesn't — lupus is about B cells only", "If apoptotic debris isn't cleared properly, this silent step can become inflammatory and license AUTOREACTIVE TH cells", "It explains why she has high blood pressure", "It explains why she gets fever"], answer: 1,
+          explain: "Exactly. In clearance deficiency, debris piles up and breaks open. Now the same nuclear material is presented in an INFLAMMATORY context. Co-stimulation flips ON. Autoreactive TH cells that slipped past thymic selection get activated. This is step 4 of the 6-step narrative." }
+  },
+  {
+    scenario: "Cancer cell that has down-regulated its MHC I to hide from cytotoxic T cells (CTLs)",
+    detail: "A tumor cell carrying mutated 'self' proteins, but smart enough to stop displaying them.",
+    q1: { text: "If MHC I is gone, can CD8+ CTLs kill this cell?", options: ["Yes, they kill any abnormal cell", "No — they need MHC I to engage", "Only if it's also infected", "Only with antibody help"], answer: 1,
+          explain: "CTLs work via the TCR–MHC I handshake. No MHC I = no handshake = no kill. The cell wins... against CTLs." },
+    q2: { text: "Who kills it instead?", options: ["NK cells — they kill cells that LACK normal MHC I (missing-self)", "B cells", "Mast cells with histamine", "Helper T cells directly"], answer: 0,
+          explain: "NK cells use 'missing-self' logic: healthy cell = MHC I present → don't kill. Suspicious cell = MHC I missing → kill via apoptosis. This is the backup system that catches both viruses AND tumors that hide their MHC I." }
+  },
+  {
+    scenario: "B cell that has bound a circulating viral capsid protein via its B cell receptor (BCR)",
+    detail: "The B cell internalized the protein and processed it. Now it needs help.",
+    q1: { text: "What does the B cell display on its surface to recruit help?", options: ["The capsid peptide on MHC I", "The capsid peptide on MHC II", "Just the intact capsid protein", "Complement factor C3b"], answer: 1,
+          explain: "B cells ARE antigen-presenting cells — they express MHC II. After internalizing the viral protein, they load fragments onto MHC II and present to TH cells. The B cell is asking for permission to become a plasma cell." },
+    q2: { text: "What happens next?", options: ["B cell instantly makes antibodies on its own", "A matching TH cell binds the MHC II–peptide and provides cytokines + CD40L signal → B cell proliferates into plasma + memory cells", "A CD8+ CTL kills the B cell", "Nothing — B cells don't need T cell help"], answer: 1,
+          explain: "Standard pathway. B cell needs (a) BCR–antigen binding and (b) cognate TH help. Both signals → activation → clonal expansion → plasma cells (antibody factories) + memory cells. Lose the TH cell (e.g., HIV), and the antibody response collapses." }
+  },
+  {
+    scenario: "Skin cell undergoing apoptosis after UV damage (Ana's sunburned cheek)",
+    detail: "UV exposure damaged DNA. The cell triggered apoptosis. Nuclear contents are condensing.",
+    q1: { text: "In a HEALTHY person, what should happen to the apoptotic debris?", options: ["Inflammation flares up", "Macrophages quietly engulf the debris; no inflammation, no antigen presentation", "B cells make antibodies against the nuclear DNA", "Complement lyses surrounding tissue"], answer: 1,
+          explain: "Silent cleanup is the norm. The body kills and replaces ~50–70 billion cells/day; if every apoptotic body triggered inflammation, you'd be on fire constantly. Macrophages and dendritic cells eat apoptotic bodies in an anti-inflammatory mode." },
+    q2: { text: "In ANA's case (clearance deficiency), what goes wrong?", options: ["Cleanup is fast and complete", "Debris accumulates and breaks open → nuclear antigens exposed → presented on MHC II IN INFLAMMATORY context → autoreactive TH cells license autoreactive B cells → anti-DNA antibodies", "Her skin makes too much keratin", "Her T cells get stuck in the thymus"], answer: 1,
+          explain: "This IS the clearance-deficiency narrative. Sun exposure produces extra apoptotic debris; in Ana, the debris isn't cleared cleanly; nuclear material becomes 'foreign-looking' antigen; the whole adaptive system gets misrouted at autologous targets. That's why lupus flares track with sun exposure." }
+  },
+  {
+    scenario: "Macrophage that engulfed Mycobacterium tuberculosis (TB)",
+    detail: "TB is sneaky — it lives INSIDE the macrophage's phagosome and blocks normal degradation.",
+    q1: { text: "TB peptides will end up on:", options: ["MHC II (because TB was engulfed)", "MHC I (because TB now lives inside the cell)", "Both pathways", "Neither — TB blocks all antigen presentation"], answer: 2,
+          explain: "TB blurs the inside/outside distinction. Engulfed → MHC II. But it lives inside the cell, so some peptides leak into the MHC I pathway too. Both CD4+ TH and CD8+ CTL responses are recruited. This is why TB immunity needs both arms working — and why it's a problem in HIV (loss of CD4)." },
+    q2: { text: "Which T cell is MOST important for controlling TB?", options: ["CD4+ TH1 cells (they activate macrophages to actually kill the intracellular TB)", "CD8+ CTLs alone", "B cells making antibodies", "NK cells"], answer: 0,
+          explain: "TH1 cells secrete IFN-γ that activates the infected macrophage to upgrade its killing machinery (reactive oxygen, nitric oxide, fusing the phagosome with lysosomes). Without CD4+ help, TB rampages. This is why HIV patients are at high TB risk." }
+  },
+  {
+    scenario: "Transplanted kidney from an unrelated donor",
+    detail: "The donor's cells express donor MHC molecules, which the recipient's immune system has never seen.",
+    q1: { text: "What do the recipient's T cells see on the donor kidney cells?", options: ["No MHC at all", "Foreign MHC I directly — and they react STRONGLY", "Self MHC with normal peptides", "Just antibodies"], answer: 1,
+          explain: "T cells were selected to react to 'foreign peptide on self MHC.' But foreign MHC itself is recognized as the foreign signal — directly — by a large fraction of the T cell repertoire. This is why transplant rejection is so fierce." },
+    q2: { text: "What's the clinical workaround?", options: ["Immunosuppressive drugs that block TH cell activation (e.g., calcineurin inhibitors)", "Just give more vitamin C", "Wait it out — the response fades", "Remove all of the recipient's T cells permanently"], answer: 0,
+          explain: "Modern transplant medicine relies on suppressing TH cell activation (cyclosporine/tacrolimus block calcineurin → no IL-2 → no T cell proliferation). The trade-off is increased infection and cancer risk — a price for the kidney." }
+  },
+  {
+    scenario: "Patient with HIV/AIDS — CD4+ TH cells are nearly depleted",
+    detail: "HIV specifically targets and destroys CD4+ helper T cells over years.",
+    q1: { text: "Which immune arm collapses?", options: ["Antibody (B cell) response collapses", "Cytotoxic (CD8) response is reduced — fewer TH cells to license CTLs", "Phagocyte recruitment is impaired", "All of the above"], answer: 3,
+          explain: "TH cells are the licensing authority for nearly every adaptive response. Lose them and you lose B cell antibody production, full CTL activation, and even good phagocyte priming. AIDS = systemic adaptive immunity failure." },
+    q2: { text: "Which opportunistic infections become common?", options: ["Common rhinovirus", "Pneumocystis jirovecii pneumonia, TB reactivation, Kaposi sarcoma (HHV-8), cryptococcal meningitis", "Just simple ear infections", "None — innate immunity is enough"], answer: 1,
+          explain: "These are the classic AIDS-defining opportunistic infections — pathogens that intact innate immunity normally controls but require adaptive (especially TH-coordinated) responses to fully clear. ALW Q7 is testing this concept." }
+  }
+];
+
+let current = 0;
+let score = 0;
+let q1Done = false, q2Done = false;
+
+const gameDiv = document.getElementById('game');
+const summaryDiv = document.getElementById('summary');
+const progressText = document.getElementById('progress-text');
+const progressFill = document.getElementById('progress-fill');
+const scoreText = document.getElementById('score-text');
+
+function render() {
+  q1Done = false; q2Done = false;
+  if (current >= rounds.length) { return showSummary(); }
+  const r = rounds[current];
+
+  progressText.textContent = `Question ${current + 1} of ${rounds.length}`;
+  progressFill.style.width = ((current) / rounds.length * 100) + '%';
+  scoreText.textContent = `Score: ${score} / ${rounds.length * 2}`;
+
+  gameDiv.innerHTML = `
+    <div class="badge">SCENARIO ${current + 1}</div>
+    <div class="scenario">${r.scenario}</div>
+    <div class="scenario-detail">${r.detail}</div>
+
+    <div class="question">Q1. ${r.q1.text}</div>
+    <div class="options" id="opts1">
+      ${r.q1.options.map((o, i) => `<button class="opt" data-i="${i}" data-q="1">${o}</button>`).join('')}
+    </div>
+    <div class="explanation" id="exp1"><strong>Why:</strong> ${r.q1.explain}</div>
+
+    <div class="question">Q2. ${r.q2.text}</div>
+    <div class="options full" id="opts2">
+      ${r.q2.options.map((o, i) => `<button class="opt" data-i="${i}" data-q="2">${o}</button>`).join('')}
+    </div>
+    <div class="explanation" id="exp2"><strong>Why:</strong> ${r.q2.explain}</div>
+
+    <div class="btn-row">
+      <span style="color:var(--muted); font-size:12px;">Tip: Answer both questions to advance.</span>
+      <button class="btn" id="nextBtn" disabled>${current === rounds.length - 1 ? 'See Results' : 'Next Scenario →'}</button>
+    </div>
+  `;
+
+  document.querySelectorAll('.opt').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const q = e.target.dataset.q;
+      const i = parseInt(e.target.dataset.i);
+      const round = rounds[current];
+      const correct = q === '1' ? round.q1.answer : round.q2.answer;
+      const opts = document.querySelectorAll(`#opts${q} .opt`);
+      opts.forEach((o, idx) => {
+        o.disabled = true;
+        if (idx === correct) o.classList.add('correct');
+        if (idx === i && i !== correct) o.classList.add('wrong');
+      });
+      document.getElementById(`exp${q}`).classList.add('show');
+      if (i === correct) { score++; playCorrect(); }
+      else { playWrong(); }
+      if (q === '1') q1Done = true; else q2Done = true;
+      scoreText.textContent = `Score: ${score} / ${rounds.length * 2}`;
+      if (q1Done && q2Done) document.getElementById('nextBtn').disabled = false;
+    });
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    playNext();
+    current++;
+    render();
+  });
+}
+
+function showSummary() {
+  gameDiv.style.display = 'none';
+  progressFill.style.width = '100%';
+  progressText.textContent = `Complete!`;
+  playComplete();
+  const max = rounds.length * 2;
+  const pct = Math.round((score / max) * 100);
+  let verdict;
+  if (pct >= 90) verdict = "Outstanding. You could teach this today.";
+  else if (pct >= 75) verdict = "Strong. Review the missed scenarios before RCS Quiz 6.";
+  else if (pct >= 60) verdict = "Working knowledge. Re-read the explanations on the questions you missed.";
+  else verdict = "Restart with the two-rule cheat sheet open: MHC I = what I made; MHC II = what I ate.";
+
+  summaryDiv.style.display = 'block';
+  summaryDiv.innerHTML = `
+    <div class="summary">
+      <h2>🎯 MHC Decision Game — Complete</h2>
+      <div class="score">${score} / ${max}</div>
+      <p><strong>${pct}%</strong> — ${verdict}</p>
+      <div class="takeaway">
+        <strong style="color:var(--red);">Three things to remember:</strong>
+        <ol style="margin-top:8px; padding-left: 22px;">
+          <li><strong>MHC I = "what I made"</strong> — every nucleated cell, read by <em>CD8+ cytotoxic</em> T cells → kill.</li>
+          <li><strong>MHC II = "what I ate"</strong> — only on APCs, read by <em>CD4+ helper</em> T cells → license other arms.</li>
+          <li>If MHC I is missing (cancer, some viruses), <strong>NK cells</strong> step in via missing-self logic.</li>
+        </ol>
+        <p style="margin-top:10px; font-size:13px; color:var(--muted);">
+          Carry this forward to Ana's case: clearance deficiency hijacks the MHC II pathway with self nuclear material in an inflammatory context. Same machinery — wrong page.
+        </p>
+      </div>
+      <button class="btn" id="restartBtn">↻ Play Again</button>
+    </div>
+  `;
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    current = 0; score = 0;
+    summaryDiv.style.display = 'none';
+    gameDiv.style.display = 'block';
+    render();
+  });
+}
+
+// Sound toggle
+document.getElementById('soundToggle').addEventListener('click', () => {
+  soundsEnabled = !soundsEnabled;
+  const btn = document.getElementById('soundToggle');
+  btn.textContent = soundsEnabled ? '🔊 Sound on' : '🔇 Sound off';
+});
+
+render();
+</script>
+</body>
+</html>
